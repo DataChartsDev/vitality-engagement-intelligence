@@ -5,6 +5,9 @@ from typing import Final
 import numpy as np
 import pandas as pd
 
+from vitality_engagement.data.behaviour_patterns import (
+    generate_engagement_trajectory,
+)
 from vitality_engagement.data.generate_members import generate_members
 from vitality_engagement.data.schema import GenerationConfig
 
@@ -38,14 +41,7 @@ SLEEP_ADJUSTMENTS: Final[dict[str, float]] = {
 def generate_member_day_skeleton(
     config: GenerationConfig,
 ) -> pd.DataFrame:
-    """Create one row for every synthetic member and calendar date.
-
-    Args:
-        config: Reproducible data-generation configuration.
-
-    Returns:
-        A DataFrame containing one row per member per date.
-    """
+    """Create one row for every synthetic member and calendar date."""
     members = generate_members(config)
 
     dates = pd.DataFrame(
@@ -69,16 +65,16 @@ def generate_member_day_skeleton(
 def generate_daily_engagement(
     config: GenerationConfig,
 ) -> pd.DataFrame:
-    """Add baseline daily behavioural signals to the member-day skeleton.
-
-    Args:
-        config: Reproducible data-generation configuration.
-
-    Returns:
-        A DataFrame containing baseline daily engagement values.
-    """
+    """Add baseline daily behavioural signals to the member-day skeleton."""
     engagement = generate_member_day_skeleton(config)
     rng = np.random.default_rng(config.random_seed + 1)
+
+    trajectory = generate_engagement_trajectory(
+        engagement,
+        config,
+    )
+
+    time_multiplier = trajectory["engagement_multiplier"].astype(float).to_numpy()
 
     row_count = len(engagement)
 
@@ -94,7 +90,12 @@ def generate_daily_engagement(
     )
 
     weekend_mask = engagement["date"].dt.dayofweek.to_numpy() >= 5
-    weekend_activity_factor = np.where(weekend_mask, 0.88, 1.0)
+
+    weekend_activity_factor = np.where(
+        weekend_mask,
+        0.88,
+        1.0,
+    )
 
     daily_activity_noise = np.clip(
         rng.normal(
@@ -111,6 +112,7 @@ def generate_daily_engagement(
             activity_baseline
             * member_activity_factors
             * weekend_activity_factor
+            * time_multiplier
             * daily_activity_noise
         ),
         0,
@@ -149,9 +151,9 @@ def generate_daily_engagement(
 
     app_session_rate = engagement["activity_level"].map(APP_SESSION_RATES).astype(float).to_numpy()
 
-    app_sessions = rng.poisson(app_session_rate * np.where(weekend_mask, 0.85, 1.0)).astype(
-        np.int64
-    )
+    app_sessions = rng.poisson(
+        app_session_rate * np.where(weekend_mask, 0.85, 1.0) * np.clip(time_multiplier, 0.60, 1.40)
+    ).astype(np.int64)
 
     return engagement.assign(
         daily_steps=daily_steps,
