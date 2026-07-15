@@ -32,3 +32,10 @@ Future goal outcomes are calculated from the clean latent behavioural process be
 Observed feature fields may then contain missing values, outliers, delays, or category changes. This allows the project to test realistic data validation and preprocessing without allowing artificial corruption to redefine the synthetic target.
 
 Data-quality indicator fields are intended primarily for monitoring and validation. They should not automatically be treated as model predictors.
+## Weekly-goal calibration
+
+Weekly goals are based on baseline activity level and include a reproducible member-specific difficulty factor.
+
+Goals are stable within each member, rounded to 10-minute increments, and designed to produce a useful but still imbalanced future goal-miss target.
+
+The expected positive target rate for the default development dataset is approximately 12% to 30%. This is a synthetic modelling-design choice and is not presented as a real-world prevalence estimate.

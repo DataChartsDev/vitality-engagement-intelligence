@@ -121,3 +121,18 @@ def test_export_creates_csv_and_parquet_files(
     assert len(csv_data) == 100
     assert len(parquet_data) == 100
     assert list(csv_data.columns) == list(parquet_data.columns)
+
+
+def test_default_target_rate_is_useful_for_modeling() -> None:
+    """The synthetic target should not be vanishingly rare."""
+    config = GenerationConfig(
+        member_count=500,
+        day_count=180,
+        random_seed=42,
+    )
+
+    data = generate_modeling_dataset(config)
+
+    target_rate = data["will_miss_goal_next_7_days"].dropna().astype(bool).mean()
+
+    assert 0.12 <= target_rate <= 0.30

@@ -4,7 +4,7 @@ An end-to-end machine-learning product for predicting near-term wellness-program
 
 ## Current status
 
-Stage 1: Environment and repository setup.
+Stage 2 complete: synthetic dataset generation, validation, export, inspection, and documentation.
 
 ## Core technologies
 

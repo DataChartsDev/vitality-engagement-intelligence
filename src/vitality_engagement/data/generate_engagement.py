@@ -26,10 +26,10 @@ STEP_BASELINES: Final[dict[str, float]] = {
     "high": 11000.0,
 }
 
-WEEKLY_GOALS: Final[dict[str, int]] = {
-    "low": 120,
-    "moderate": 180,
-    "high": 240,
+BASE_WEEKLY_GOALS: Final[dict[str, int]] = {
+    "low": 150,
+    "moderate": 240,
+    "high": 350,
 }
 
 APP_SESSION_RATES: Final[dict[str, float]] = {
@@ -76,7 +76,9 @@ def generate_daily_engagement(
 ) -> pd.DataFrame:
     """Add baseline daily behavioural signals to the member-day skeleton."""
     engagement = generate_member_day_skeleton(config)
+
     rng = np.random.default_rng(config.random_seed + 1)
+    goal_rng = np.random.default_rng(config.random_seed + 5)
 
     trajectory = generate_engagement_trajectory(
         engagement,
@@ -156,7 +158,24 @@ def generate_daily_engagement(
         10.5,
     )
 
-    weekly_goal = engagement["activity_level"].map(WEEKLY_GOALS).astype("int64")
+    base_weekly_goal = engagement["activity_level"].map(BASE_WEEKLY_GOALS).astype(float).to_numpy()
+
+    member_goal_factors = np.repeat(
+        goal_rng.uniform(
+            low=0.90,
+            high=1.10,
+            size=config.member_count,
+        ),
+        config.day_count,
+    )
+
+    weekly_goal = np.rint(base_weekly_goal * member_goal_factors / 10.0) * 10
+
+    weekly_goal = np.clip(
+        weekly_goal,
+        140,
+        450,
+    ).astype(np.int64)
 
     app_session_rate = engagement["activity_level"].map(APP_SESSION_RATES).astype(float).to_numpy()
 
@@ -176,7 +195,7 @@ def generate_daily_engagement(
 def generate_modeling_dataset(
     config: GenerationConfig,
 ) -> pd.DataFrame:
-    """Generate modelling records with labels and data issues."""
+    """Generate modelling records with labels and data-quality issues."""
     engagement = generate_daily_engagement(config)
 
     engagement_with_history = add_interaction_history(
@@ -184,23 +203,11 @@ def generate_modeling_dataset(
         config,
     )
 
-    labelled_data = add_goal_metrics_and_target(engagement_with_history)
+    labelled_data = add_goal_metrics_and_target(
+        engagement_with_history,
+    )
 
     return add_data_quality_issues(
         labelled_data,
         config,
     )
-    """Generate daily engagement records with future outcome labels."""
-    engagement = generate_daily_engagement(config)
-
-    engagement_with_history = add_interaction_history(
-        engagement,
-        config,
-    )
-
-    return add_goal_metrics_and_target(engagement_with_history)
-
-    """Generate daily engagement records with future outcome labels."""
-    engagement = generate_daily_engagement(config)
-
-    return add_goal_metrics_and_target(engagement)
