@@ -12,6 +12,9 @@ from vitality_engagement.data.generate_members import generate_members
 from vitality_engagement.data.goal_metrics import (
     add_goal_metrics_and_target,
 )
+from vitality_engagement.data.interaction_history import (
+    add_interaction_history,
+)
 from vitality_engagement.data.schema import GenerationConfig
 
 STEP_BASELINES: Final[dict[str, float]] = {
@@ -170,6 +173,16 @@ def generate_daily_engagement(
 def generate_modeling_dataset(
     config: GenerationConfig,
 ) -> pd.DataFrame:
+    """Generate daily engagement records with future outcome labels."""
+    engagement = generate_daily_engagement(config)
+
+    engagement_with_history = add_interaction_history(
+        engagement,
+        config,
+    )
+
+    return add_goal_metrics_and_target(engagement_with_history)
+
     """Generate daily engagement records with future outcome labels."""
     engagement = generate_daily_engagement(config)
 
