@@ -19,3 +19,5 @@ Stage 2 complete: synthetic dataset generation, validation, export, inspection, 
 ## Important limitation
 
 This project uses synthetic wellness-engagement data. Results generated from synthetic data do not demonstrate real-world health or behavioural effectiveness.
+
+Stage 3 complete: BigQuery ingestion, SQL data-quality assertions, leakage-safe 28-day features, chronological splits, BigQuery ML logistic-regression evaluation, and operational scoring.
