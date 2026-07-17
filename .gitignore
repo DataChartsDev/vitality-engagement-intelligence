@@ -35,7 +35,7 @@ data/sample/*
 
 # Model and experiment outputs
 mlruns/
-models/
+/models/
 artifacts/
 
 # IDE and operating-system files
