@@ -48,6 +48,11 @@ from vitality_engagement.activation.schema import (
     SelectedActivation,
     SuppressedPrediction,
 )
+from vitality_engagement.activation.warehouse import (
+    ActivationWarehouseClient,
+    ActivationWarehouseUploadResult,
+    upload_activation_artifact_to_bigquery,
+)
 
 __all__ = [
     "ACTIVATION_DECISION_COLUMNS",
@@ -62,6 +67,8 @@ __all__ = [
     "ActivationStagingTables",
     "ActivationWarehouseConfig",
     "ActivationWarehouseError",
+    "ActivationWarehouseUploadResult",
+    "ActivationWarehouseClient",
     "ActivationStagingTables",
     "ActivationWarehouseConfig",
     "ActivationWarehouseError",
@@ -97,5 +104,6 @@ __all__ = [
     "calculate_policy_fingerprint",
     "decide_activations",
     "verify_activation_artifact",
+    "upload_activation_artifact_to_bigquery",
     "write_activation_artifact",
 ]

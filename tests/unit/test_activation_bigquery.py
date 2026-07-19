@@ -9,6 +9,7 @@ from vitality_engagement.activation.bigquery import (
     ACTIVATION_RUN_SCHEMA,
     ActivationWarehouseConfig,
     ActivationWarehouseError,
+    build_activation_merge_query,
     build_bigquery_schema,
     build_create_activation_tables_query,
     build_decision_merge_query,
@@ -147,3 +148,22 @@ def test_decision_merge_uses_complete_immutable_key() -> None:
     assert "target.threshold IS DISTINCT FROM source.threshold" in query
     assert "target.outcome IS DISTINCT FROM source.outcome" in query
     assert "0.467" not in query
+
+
+def test_combined_merge_is_atomic_and_asserts_before_transaction() -> None:
+    config = ActivationWarehouseConfig()
+    staging = build_staging_tables(
+        config,
+        "act_0123456789abcdef01234567",
+    )
+    query = build_activation_merge_query(config, staging)
+
+    assert query.count("BEGIN TRANSACTION;") == 1
+    assert query.count("COMMIT TRANSACTION;") == 1
+    assert query.count("MERGE ") == 2
+    assert query.index("ASSERT") < query.index("BEGIN TRANSACTION;")
+    assert query.index(f"MERGE `{config.run_table}`") > query.index("BEGIN TRANSACTION;")
+    assert query.index(f"MERGE `{config.decision_table}`") > query.index(
+        f"MERGE `{config.run_table}`"
+    )
+    assert query.index("COMMIT TRANSACTION;") > query.index(f"MERGE `{config.decision_table}`")

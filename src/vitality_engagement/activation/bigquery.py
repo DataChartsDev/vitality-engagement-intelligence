@@ -381,3 +381,48 @@ WHEN NOT MATCHED THEN
         {insert_values}
     );
 """.strip()
+
+
+def _split_assertions_and_merge(
+    query: str,
+) -> tuple[str, str]:
+    """Split a governed merge script into assertions and its MERGE."""
+    assertions, separator, merge_body = query.partition("MERGE ")
+
+    if not separator:
+        raise ActivationWarehouseError("Governed activation merge query does not contain MERGE.")
+
+    return assertions.strip(), f"MERGE {merge_body.strip()}"
+
+
+def build_activation_merge_query(
+    config: ActivationWarehouseConfig,
+    staging: ActivationStagingTables,
+) -> str:
+    """Build an atomic merge for activation-run and decision records."""
+    run_assertions, run_merge = _split_assertions_and_merge(
+        build_run_merge_query(
+            config,
+            staging,
+        )
+    )
+    decision_assertions, decision_merge = _split_assertions_and_merge(
+        build_decision_merge_query(
+            config,
+            staging,
+        )
+    )
+
+    return f"""
+{run_assertions}
+
+{decision_assertions}
+
+BEGIN TRANSACTION;
+
+{run_merge}
+
+{decision_merge}
+
+COMMIT TRANSACTION;
+""".strip()
