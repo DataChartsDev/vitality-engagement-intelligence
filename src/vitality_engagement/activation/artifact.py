@@ -22,7 +22,7 @@ DEFAULT_ACTIVATION_DECISION_PATH: Final = Path("artifacts/activation/activation_
 DEFAULT_ACTIVATION_METADATA_PATH: Final = Path(
     "artifacts/activation/activation_decisions.metadata.json"
 )
-ACTIVATION_ARTIFACT_VERSION: Final = 1
+ACTIVATION_ARTIFACT_VERSION: Final = 2
 
 RUN_ID_COLUMN: Final = "run_id"
 POLICY_VERSION_COLUMN: Final = "policy_version"
@@ -69,6 +69,12 @@ class ActivationArtifactMetadata:
     threshold: float
     scoring_artifact_path: str
     scoring_artifact_sha256: str
+    contact_context_artifact_path: str
+    contact_context_artifact_sha256: str
+    contact_context_source_name: str
+    contact_context_source_snapshot_reference: str
+    contact_context_source_query_sha256: str
+    contact_context_snapshot_timestamp: str
     decision_timestamp: str
     capacity_limit: int
     source_row_count: int
@@ -139,6 +145,16 @@ def build_activation_artifact_metadata(
         threshold=metadata.threshold,
         scoring_artifact_path=metadata.scoring_artifact_path,
         scoring_artifact_sha256=metadata.scoring_artifact_sha256,
+        contact_context_artifact_path=(metadata.contact_context_lineage.artifact_path),
+        contact_context_artifact_sha256=(metadata.contact_context_lineage.artifact_sha256),
+        contact_context_source_name=(metadata.contact_context_lineage.source_name),
+        contact_context_source_snapshot_reference=(
+            metadata.contact_context_lineage.source_snapshot_reference
+        ),
+        contact_context_source_query_sha256=(metadata.contact_context_lineage.source_query_sha256),
+        contact_context_snapshot_timestamp=(
+            metadata.contact_context_lineage.snapshot_timestamp.isoformat()
+        ),
         decision_timestamp=metadata.decision_timestamp.isoformat(),
         capacity_limit=metadata.capacity_limit,
         source_row_count=metadata.source_row_count,

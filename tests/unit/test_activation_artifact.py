@@ -143,7 +143,21 @@ def test_activation_metadata_preserves_run_lineage() -> None:
 
     assert metadata.run_id == result.metadata.run_id
     assert metadata.policy_fingerprint == result.metadata.policy_fingerprint
+    assert metadata.artifact_version == 2
     assert metadata.scoring_artifact_sha256 == SCORING_DIGEST
+    assert metadata.contact_context_artifact_path == CONTACT_CONTEXT_LINEAGE.artifact_path
+    assert metadata.contact_context_artifact_sha256 == CONTACT_CONTEXT_LINEAGE.artifact_sha256
+    assert metadata.contact_context_source_name == CONTACT_CONTEXT_LINEAGE.source_name
+    assert (
+        metadata.contact_context_source_snapshot_reference
+        == CONTACT_CONTEXT_LINEAGE.source_snapshot_reference
+    )
+    assert (
+        metadata.contact_context_source_query_sha256 == CONTACT_CONTEXT_LINEAGE.source_query_sha256
+    )
+    assert metadata.contact_context_snapshot_timestamp == (
+        CONTACT_CONTEXT_LINEAGE.snapshot_timestamp.isoformat()
+    )
     assert metadata.source_row_count == 5
     assert metadata.source_member_count == 4
     assert metadata.selected_count == 1

@@ -77,6 +77,14 @@ def test_bigquery_schemas_match_governed_columns() -> None:
 
     assert run_schema[0].name == "artifact_version"
     assert run_schema[1].name == "run_id"
+    assert any(
+        field.name == "contact_context_artifact_sha256" and field.mode == "REQUIRED"
+        for field in run_schema
+    )
+    assert any(
+        field.name == "contact_context_snapshot_timestamp" and field.field_type == "TIMESTAMP"
+        for field in run_schema
+    )
     assert run_schema[-1].name == "ingested_at"
 
 
@@ -113,6 +121,11 @@ def test_create_tables_query_uses_governed_partitioning_and_clustering() -> None
     assert "PARTITION BY prediction_date" in query
     assert "CLUSTER BY policy_version, model_name" in query
     assert "CLUSTER BY run_id, outcome, member_id" in query
+    assert "contact_context_artifact_sha256 STRING NOT NULL" in query
+    assert (
+        "ALTER TABLE `vitality-engagement-43999.vitality_engagement_dev.activation_runs`" in query
+    )
+    assert "ADD COLUMN IF NOT EXISTS contact_context_snapshot_timestamp TIMESTAMP" in query
     assert "0.467" not in query
 
 
@@ -129,6 +142,11 @@ def test_run_merge_is_insert_only_and_conflict_checked() -> None:
     assert "WHEN NOT MATCHED THEN" in query
     assert "WHEN MATCHED THEN UPDATE" not in query
     assert "IS DISTINCT FROM" in query
+    assert (
+        "target.contact_context_artifact_sha256 "
+        "IS DISTINCT FROM "
+        "source.contact_context_artifact_sha256" in query
+    )
     assert "Duplicate run IDs" in query
 
 

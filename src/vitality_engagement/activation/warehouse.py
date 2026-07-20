@@ -160,6 +160,11 @@ def _build_run_warehouse_frame(
         errors="raise",
         utc=True,
     )
+    frame["contact_context_snapshot_timestamp"] = pd.to_datetime(
+        frame["contact_context_snapshot_timestamp"],
+        errors="raise",
+        utc=True,
+    )
     frame["ingested_at"] = pd.Timestamp(ingested_at)
 
     return frame.loc[

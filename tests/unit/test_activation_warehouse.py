@@ -303,6 +303,22 @@ def test_successful_upload_is_explicit_atomic_and_cleaned(
     ]
 
     assert set(run_frame["ingested_at"]) == {pd.Timestamp(INGESTED_AT)}
+    assert set(run_frame["contact_context_artifact_path"]) == {
+        CONTACT_CONTEXT_LINEAGE.artifact_path
+    }
+    assert set(run_frame["contact_context_artifact_sha256"]) == {
+        CONTACT_CONTEXT_LINEAGE.artifact_sha256
+    }
+    assert set(run_frame["contact_context_source_name"]) == {CONTACT_CONTEXT_LINEAGE.source_name}
+    assert set(run_frame["contact_context_source_snapshot_reference"]) == {
+        CONTACT_CONTEXT_LINEAGE.source_snapshot_reference
+    }
+    assert set(run_frame["contact_context_source_query_sha256"]) == {
+        CONTACT_CONTEXT_LINEAGE.source_query_sha256
+    }
+    assert set(run_frame["contact_context_snapshot_timestamp"]) == {
+        pd.Timestamp(CONTACT_CONTEXT_LINEAGE.snapshot_timestamp)
+    }
     assert set(decision_frame["ingested_at"]) == {pd.Timestamp(INGESTED_AT)}
 
     assert fake_client.deleted_tables == [

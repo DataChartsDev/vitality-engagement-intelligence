@@ -29,6 +29,12 @@ ACTIVATION_RUN_COLUMNS: Final = (
     "threshold",
     "scoring_artifact_path",
     "scoring_artifact_sha256",
+    "contact_context_artifact_path",
+    "contact_context_artifact_sha256",
+    "contact_context_source_name",
+    "contact_context_source_snapshot_reference",
+    "contact_context_source_query_sha256",
+    "contact_context_snapshot_timestamp",
     "decision_timestamp",
     "capacity_limit",
     "source_row_count",
@@ -78,6 +84,24 @@ ACTIVATION_RUN_SCHEMA: Final[SchemaDefinition] = (
     ("threshold", "FLOAT", "REQUIRED"),
     ("scoring_artifact_path", "STRING", "REQUIRED"),
     ("scoring_artifact_sha256", "STRING", "REQUIRED"),
+    ("contact_context_artifact_path", "STRING", "REQUIRED"),
+    ("contact_context_artifact_sha256", "STRING", "REQUIRED"),
+    ("contact_context_source_name", "STRING", "REQUIRED"),
+    (
+        "contact_context_source_snapshot_reference",
+        "STRING",
+        "REQUIRED",
+    ),
+    (
+        "contact_context_source_query_sha256",
+        "STRING",
+        "REQUIRED",
+    ),
+    (
+        "contact_context_snapshot_timestamp",
+        "TIMESTAMP",
+        "REQUIRED",
+    ),
     ("decision_timestamp", "TIMESTAMP", "REQUIRED"),
     ("capacity_limit", "INTEGER", "REQUIRED"),
     ("source_row_count", "INTEGER", "REQUIRED"),
@@ -196,6 +220,12 @@ CREATE TABLE IF NOT EXISTS `{config.run_table}` (
     threshold FLOAT64 NOT NULL,
     scoring_artifact_path STRING NOT NULL,
     scoring_artifact_sha256 STRING NOT NULL,
+    contact_context_artifact_path STRING NOT NULL,
+    contact_context_artifact_sha256 STRING NOT NULL,
+    contact_context_source_name STRING NOT NULL,
+    contact_context_source_snapshot_reference STRING NOT NULL,
+    contact_context_source_query_sha256 STRING NOT NULL,
+    contact_context_snapshot_timestamp TIMESTAMP NOT NULL,
     decision_timestamp TIMESTAMP NOT NULL,
     capacity_limit INT64 NOT NULL,
     source_row_count INT64 NOT NULL,
@@ -214,6 +244,24 @@ CLUSTER BY policy_version, model_name
 OPTIONS (
     description = 'Immutable lineage and decision counts for activation runs.'
 );
+
+ALTER TABLE `{config.run_table}`
+ADD COLUMN IF NOT EXISTS contact_context_artifact_path STRING;
+
+ALTER TABLE `{config.run_table}`
+ADD COLUMN IF NOT EXISTS contact_context_artifact_sha256 STRING;
+
+ALTER TABLE `{config.run_table}`
+ADD COLUMN IF NOT EXISTS contact_context_source_name STRING;
+
+ALTER TABLE `{config.run_table}`
+ADD COLUMN IF NOT EXISTS contact_context_source_snapshot_reference STRING;
+
+ALTER TABLE `{config.run_table}`
+ADD COLUMN IF NOT EXISTS contact_context_source_query_sha256 STRING;
+
+ALTER TABLE `{config.run_table}`
+ADD COLUMN IF NOT EXISTS contact_context_snapshot_timestamp TIMESTAMP;
 
 CREATE TABLE IF NOT EXISTS `{config.decision_table}` (
     run_id STRING NOT NULL,
