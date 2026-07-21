@@ -36,6 +36,11 @@ from vitality_engagement.activation.engine import (
     ActivationDecisionResult,
     decide_activations,
 )
+from vitality_engagement.activation.orchestrator import (
+    ActivationOrchestrationError,
+    ActivationOrchestrationResult,
+    orchestrate_offline_activation,
+)
 from vitality_engagement.activation.policy import (
     ActivationPolicy,
     build_activation_run_id,
@@ -90,6 +95,8 @@ __all__ = [
     "ContactContextLineage",
     "ActivationDecisionError",
     "ActivationDecisionResult",
+    "ActivationOrchestrationError",
+    "ActivationOrchestrationResult",
     "ActivationPolicy",
     "ActivationRunMetadata",
     "DecisionOutcome",
@@ -119,6 +126,7 @@ __all__ = [
     "calculate_policy_fingerprint",
     "decide_activations",
     "load_verified_contact_context_artifact",
+    "orchestrate_offline_activation",
     "verify_activation_artifact",
     "upload_activation_artifact_to_bigquery",
     "write_activation_artifact",
