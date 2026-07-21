@@ -150,6 +150,27 @@ The prediction output contains:
 
 These rows are forecasts, not confirmed missed-goal outcomes.
 
+## Stage 5 — Governed activation workflow
+
+Stage 5 converts verified scoring forecasts and an independently verified contact-context snapshot into deterministic, capacity-aware recommendations for mandatory human review.
+
+The workflow audits every scoring row, applies permission and suppression rules, preserves scoring and contact-context lineage, enforces a maximum of 100 selected records per run, and writes verified local Parquet and metadata artifacts.
+
+A legitimate approved contact-context artifact is required. The repository does not fabricate or provide one.
+
+The local command is available through:
+
+`python -m vitality_engagement.activation.cli`
+
+Do not run it until approved contact-context files exist. The default local outputs are:
+
+- `artifacts/activation/activation_decisions.parquet`
+- `artifacts/activation/activation_decisions.metadata.json`
+
+A selected record is a recommendation for authorised human review only. It is not automatically approved for contact.
+
+See `docs/activation_policy.md` and `docs/activation_runbook.md`.
+
 ### Quality gate
 
 ```powershell
@@ -176,7 +197,7 @@ docs/model_card.md
 | Stage 2 — Synthetic data and BigQuery ingestion      | Complete    |
 | Stage 3 — Governed features and BigQuery ML baseline | Complete    |
 | Stage 4 — Python modelling and operational scoring   | Complete    |
-| Stage 5 — Activation pipeline                        | Not started |
+| Stage 5 — Activation pipeline                        | In progress |
 | Stage 6 — Looker Studio dashboard                    | Not started |
 | Stage 7 — Monitoring and governance                  | Not started |
 | Stage 8 — Final documentation and portfolio polish   | Not started |

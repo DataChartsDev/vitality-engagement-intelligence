@@ -2,22 +2,31 @@
 
 ## Status
 
-Stage 5.1 defines the activation policy and typed contracts only. It does not select members,
-write activation artifacts, write to BigQuery, or deliver interventions.
+Stage 5 implements a deterministic, capacity-aware, auditable activation workflow for synthetic engagement-risk forecasts.
+
+The workflow independently verifies scoring and contact-context artifacts, applies governed decision rules, preserves immutable lineage, and writes local review artifacts.
+
+The local activation command does not upload data, contact members, send messages, trigger dashboard actions, or dispatch interventions.
 
 ## Intended use
 
-The activation pipeline converts verified engagement-risk forecasts into supportive,
-human-reviewed recommendations. It must not be used to deny benefits, change eligibility,
-penalise members, make clinical or diagnostic conclusions, infer real health status, or claim
-causal intervention effects.
+The activation workflow produces supportive recommendations for mandatory human review.
 
-All current data is synthetic. Operational scoring rows are forecasts and are not confirmed
-missed-goal outcomes.
+It must not be used to:
 
-## Source contract
+- Deny benefits
+- Change eligibility
+- Penalise members
+- Make clinical or diagnostic conclusions
+- Infer real health status
+- Claim causal intervention effects
+- Automatically contact or target members
 
-The source is the verified Stage 4 scoring artifact with these fields:
+All current data is synthetic. Predictions are forecasts, not confirmed missed-goal outcomes.
+
+## Scoring contract
+
+The verified Stage 4 scoring artifact contains:
 
 - `member_id`
 - `prediction_date`
@@ -26,109 +35,91 @@ The source is the verified Stage 4 scoring artifact with these fields:
 - `model_name`
 - `threshold`
 
-The frozen logistic threshold remains `0.431`. The activation layer may not alter or retune it.
+The frozen threshold remains `0.431`. The activation layer may not alter or retune it.
 
-## Stage 5 development policy
+## Contact-context contract
 
-The initial deterministic development policy uses:
+Every legitimate run requires a verified contact-context snapshot containing:
+
+- `member_id`
+- `contact_allowed`
+- `opted_out`
+- `active_case_open`
+- `last_contacted_at`
+- `interventions_last_28d`
+- `context_as_of`
+
+Its metadata must preserve the source name, immutable snapshot reference, source-query digest, artifact digest, timezone-aware snapshot timestamp, row and member counts, and governed output columns.
+
+The context snapshot must not be later than the activation decision timestamp.
+
+The repository does not fabricate or provide a production contact-context artifact.
+
+## Deterministic policy
+
+The engineering defaults are:
 
 - High-risk predictions only
 - Maximum prediction age of 7 days
 - Contact cooldown of 7 days
 - Maximum 2 interventions per member in 28 days
-- Maximum 100 selected activations per run
+- Maximum 100 selected records per run
 - Mandatory human review
 - Supportive use only
 
-These are engineering defaults for a synthetic portfolio project, not validated clinical,
-behavioural, legal, or production operating rules. Changing them requires a new policy version.
+These defaults are for a synthetic portfolio project. They are not validated clinical, behavioural, legal, or production operating rules.
 
 ## Decision order
 
-The future decision engine will apply this order:
+1. Validate scoring rows and frozen-threshold classifications.
+2. Retain the latest prediction per member.
+3. Audit older predictions as superseded no-contact decisions.
+4. Audit below-threshold predictions as no-contact decisions.
+5. Apply missing-context, permission, and opt-out exclusions.
+6. Apply recency, active-case, cooldown, and prior-contact suppressions.
+7. Rank eligible members deterministically.
+8. Apply the per-run capacity limit.
+9. Produce supportive recommendations for human review.
+10. Write one audit outcome for every scoring row.
 
-1. Validate the scoring row and frozen-threshold classification.
-2. Retain one latest prediction per member using deterministic ordering and audit older rows
-   as superseded no-contact decisions.
-3. Record below-threshold rows as no-contact outcomes.
-4. Apply exclusions: missing context, contact not permitted, then member opt-out.
-5. Apply suppressions: stale prediction, active case, contact cooldown, then prior-contact limit.
-6. Rank remaining eligible members by risk probability descending, prediction date descending,
-   and member ID ascending as the stable tie-breaker.
-7. Apply the per-run capacity limit.
-8. Produce supportive recommendations for human review only.
-9. Write one audit outcome for every input scoring row.
+## Run identity and lineage
 
-Stage 5.3 will implement and test this ordering. Stage 5.1 only freezes its contract.
+The deterministic run ID incorporates the policy fingerprint, model name, frozen threshold, scoring artifact digest, contact-context artifact and source lineage, contact-context snapshot timestamp, and decision timestamp normalised to UTC.
 
-## Deterministic run identity
+Changing any governed lineage input produces a different run ID.
 
-A run ID is derived from:
+## Local artifacts
 
-- Full policy fingerprint
-- Model name
-- Frozen threshold
-- Scoring artifact SHA-256 digest
-- Exact timezone-aware decision timestamp, normalised to UTC
-
-Re-running the same governed inputs at the same decision timestamp produces the same run ID. A change to any governed input
-produces a different ID.
-
-## Typed records
-
-The source code defines typed contracts for:
-
-- Scored prediction
-- Member activation context
-- Eligible prediction
-- Excluded prediction
-- Suppressed prediction
-- Intervention recommendation
-- Selected activation
-- Activation audit record
-- Activation run metadata
-
-Raw dictionaries are not the primary application interface.
-
-## No-contact outcomes
-
-No-contact decisions are explicit audit outcomes rather than missing records. Reasons include:
-
-- Superseded by the latest member prediction
-- Below frozen threshold
-- Missing activation context
-- Contact not permitted
-- Member opted out
-- Prediction too old
-- Active case open
-- Contact cooldown active
-- Prior intervention limit reached
-- Capacity limit reached
-
-## Deferred work
-
-This milestone deliberately defers:
-
-- Deterministic eligibility and ranking implementation
-- Activation Parquet and metadata writers
-- BigQuery activation tables or merge logic
-- Dashboard development
-- Intervention delivery or message sending
-- Experimental treatment assignment
-
-## Activation artifact contract
-
-Stage 5.4 persists one audit row for every source scoring row to:
+The verified local outputs are:
 
 - `artifacts/activation/activation_decisions.parquet`
 - `artifacts/activation/activation_decisions.metadata.json`
 
-The writer uses temporary files, validates both pending artifacts, and replaces the final
-paths only after verification succeeds. It verifies identifiers, lineage, probabilities,
-the frozen threshold, timestamps, outcomes, reason codes, selected intervention fields,
-priority ranks, decision counts, and metadata.
+Generated artifacts are ignored by Git. The writer validates temporary Parquet and metadata files before atomically replacing final outputs.
 
-This milestone does not provide an operational command that fabricates member contact
-context. A governed source for opt-out status, contact permission, active cases, contact
-history, and prior-intervention counts must be defined before an end-to-end activation run
-is legitimate.
+## BigQuery boundary
+
+BigQuery persistence is a separate explicit operation and is not exposed by the local CLI.
+
+No upload may occur unless the scoring artifact is verified, the contact context is legitimate and approved, all lineage is verified, the activation artifact passes verification, human and governance approval is recorded, and the destination project, dataset, region, and schema are confirmed.
+
+Warehouse persistence does not authorise outreach.
+
+## Human-review boundary
+
+`selected_for_review` means only that a record may be considered by an authorised reviewer. It does not mean approved for contact, automatically messaged, automatically enrolled, assigned to treatment, diagnosed, or confirmed to disengage.
+
+## Prohibited automation
+
+Stage 5 must not automatically:
+
+- Send email, SMS, notifications, or other outreach
+- Trigger dashboard actions
+- Open or close cases
+- Change benefits or eligibility
+- Assign experimental treatment
+- Apply penalties
+- Make clinical conclusions
+- Claim intervention causality
+
+See `docs/activation_runbook.md` for the local operating procedure.
