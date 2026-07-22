@@ -150,6 +150,8 @@ The prediction output contains:
 
 These rows are forecasts, not confirmed missed-goal outcomes.
 
+
+
 ## Stage 5 — Governed activation workflow
 
 Stage 5 converts verified scoring forecasts and an independently verified contact-context snapshot into deterministic, capacity-aware recommendations for mandatory human review.
@@ -166,10 +168,18 @@ Do not run it until approved contact-context files exist. The default local outp
 
 - `artifacts/activation/activation_decisions.parquet`
 - `artifacts/activation/activation_decisions.metadata.json`
+- `artifacts/activation/human_review_queue.parquet`
+- `artifacts/activation/human_review_queue.metadata.json`
+
+The human-review queue contains only records already marked `selected_for_review`, ordered by deterministic priority rank, with a fixed `pending_human_review` status. Its metadata preserves SHA-256 lineage to both source activation artifacts.
+
+The CLI prints the activation artifact paths, review-queue paths, source rows audited, selected count, and `Mode: local artifacts only`.
 
 A selected record is a recommendation for authorised human review only. It is not automatically approved for contact.
 
 See `docs/activation_policy.md` and `docs/activation_runbook.md`.
+
+
 
 ### Quality gate
 
@@ -197,7 +207,7 @@ docs/model_card.md
 | Stage 2 — Synthetic data and BigQuery ingestion      | Complete    |
 | Stage 3 — Governed features and BigQuery ML baseline | Complete    |
 | Stage 4 — Python modelling and operational scoring   | Complete    |
-| Stage 5 — Activation pipeline                        | In progress |
+| Stage 5 — Activation pipeline                        | Complete    |
 | Stage 6 — Looker Studio dashboard                    | Not started |
 | Stage 7 — Monitoring and governance                  | Not started |
 | Stage 8 — Final documentation and portfolio polish   | Not started |

@@ -47,8 +47,14 @@ The paths and timestamp above are examples. Do not execute the example unchanged
 
 - `artifacts/activation/activation_decisions.parquet`
 - `artifacts/activation/activation_decisions.metadata.json`
+- `artifacts/activation/human_review_queue.parquet`
+- `artifacts/activation/human_review_queue.metadata.json`
 
-A successful command prints the run ID, output paths, source rows audited, records selected for human review, and confirmation that execution was local-only.
+The review queue contains only records already marked `selected_for_review`, ordered by deterministic priority rank. Every row has the fixed status `pending_human_review`; the workflow does not create an approved-for-contact status.
+
+The review-queue metadata records SHA-256 digests for both source activation artifacts, so any source change invalidates verification.
+
+A successful command prints the run ID, activation artifact paths, review-queue paths, source rows audited, records selected for human review, and confirmation that execution was local-only.
 
 ## Fail-closed behaviour
 
@@ -59,6 +65,8 @@ Verification failures occur before final activation outputs are written.
 ## Review checklist
 
 Before downstream persistence, confirm that every scoring row has one audit outcome, scoring and contact-context lineage are present, timestamps are correct, selected ranks are contiguous, the selected count does not exceed capacity, metadata counts match Parquet outcomes, and human and governance approval has been recorded.
+
+Also verify that the review queue contains only `selected_for_review` records, every queue row remains `pending_human_review`, and the review-queue source digests match the verified activation Parquet and metadata files.
 
 ## Warehouse persistence
 

@@ -94,8 +94,14 @@ The verified local outputs are:
 
 - `artifacts/activation/activation_decisions.parquet`
 - `artifacts/activation/activation_decisions.metadata.json`
+- `artifacts/activation/human_review_queue.parquet`
+- `artifacts/activation/human_review_queue.metadata.json`
 
-Generated artifacts are ignored by Git. The writer validates temporary Parquet and metadata files before atomically replacing final outputs.
+The human-review queue is a deterministic projection of records already marked `selected_for_review`. It is ordered by priority rank and uses only the fixed status `pending_human_review`.
+
+Its metadata preserves the SHA-256 digests and paths of both source activation artifacts. A queue is invalid when its contents, metadata, or source activation artifacts no longer match.
+
+Generated artifacts are ignored by Git. The activation and review-queue writers validate temporary Parquet and metadata files before atomically replacing final outputs.
 
 ## BigQuery boundary
 
