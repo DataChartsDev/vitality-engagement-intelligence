@@ -29,6 +29,8 @@ class _FakeOrchestrationResult:
     decision_result: _FakeDecisionResult
     decision_path: Path
     metadata_path: Path
+    review_queue_path: Path
+    review_metadata_path: Path
 
 
 def test_parser_requires_governed_contact_inputs() -> None:
@@ -103,6 +105,8 @@ def test_main_runs_local_orchestrator_and_prints_summary(
 
     decision_path = tmp_path / "activation.parquet"
     metadata_path = tmp_path / "activation.metadata.json"
+    review_queue_path = tmp_path / "human_review_queue.parquet"
+    review_metadata_path = tmp_path / "human_review_queue.metadata.json"
 
     def fake_orchestrate_offline_activation(
         **arguments: object,
@@ -118,6 +122,8 @@ def test_main_runs_local_orchestrator_and_prints_summary(
             ),
             decision_path=decision_path,
             metadata_path=metadata_path,
+            review_queue_path=review_queue_path,
+            review_metadata_path=review_metadata_path,
         )
 
     monkeypatch.setattr(
@@ -138,6 +144,10 @@ def test_main_runs_local_orchestrator_and_prints_summary(
             str(decision_path),
             "--activation-metadata-path",
             str(metadata_path),
+            "--review-queue-path",
+            str(review_queue_path),
+            "--review-metadata-path",
+            str(review_metadata_path),
         ]
     )
 
@@ -155,10 +165,14 @@ def test_main_runs_local_orchestrator_and_prints_summary(
     assert captured["policy"] == ActivationPolicy()
     assert captured["activation_decision_path"] == decision_path
     assert captured["activation_metadata_path"] == metadata_path
+    assert captured["review_queue_path"] == review_queue_path
+    assert captured["review_metadata_path"] == review_metadata_path
 
     output = capsys.readouterr().out
 
     assert "Run ID: act-test-run" in output
+    assert f"Review queue artifact: {review_queue_path}" in output
+    assert f"Review queue metadata: {review_metadata_path}" in output
     assert "Source rows audited: 4" in output
     assert "Selected for human review: 1" in output
     assert "Mode: local artifacts only" in output

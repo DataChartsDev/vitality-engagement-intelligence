@@ -15,6 +15,10 @@ from vitality_engagement.activation.orchestrator import (
     orchestrate_offline_activation,
 )
 from vitality_engagement.activation.policy import ActivationPolicy
+from vitality_engagement.activation.review_queue import (
+    DEFAULT_REVIEW_QUEUE_METADATA_PATH,
+    DEFAULT_REVIEW_QUEUE_PATH,
+)
 from vitality_engagement.models.scoring_artifact import (
     DEFAULT_PREDICTION_PATH,
     DEFAULT_SCORING_METADATA_PATH,
@@ -87,6 +91,18 @@ def build_argument_parser() -> argparse.ArgumentParser:
         default=DEFAULT_ACTIVATION_METADATA_PATH,
         help="Local JSON path for activation run metadata.",
     )
+    parser.add_argument(
+        "--review-queue-path",
+        type=Path,
+        default=DEFAULT_REVIEW_QUEUE_PATH,
+        help="Local Parquet path for the pending human-review queue.",
+    )
+    parser.add_argument(
+        "--review-metadata-path",
+        type=Path,
+        default=DEFAULT_REVIEW_QUEUE_METADATA_PATH,
+        help="Local JSON path for human-review queue metadata.",
+    )
     return parser
 
 
@@ -101,8 +117,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         policy=ActivationPolicy(),
         scoring_prediction_path=(arguments.scoring_prediction_path),
         scoring_metadata_path=arguments.scoring_metadata_path,
-        activation_decision_path=(arguments.activation_decision_path),
-        activation_metadata_path=(arguments.activation_metadata_path),
+        activation_decision_path=arguments.activation_decision_path,
+        activation_metadata_path=arguments.activation_metadata_path,
+        review_queue_path=arguments.review_queue_path,
+        review_metadata_path=arguments.review_metadata_path,
     )
 
     metadata = result.decision_result.metadata
@@ -110,6 +128,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(f"Run ID: {metadata.run_id}")
     print(f"Decision artifact: {result.decision_path}")
     print(f"Metadata artifact: {result.metadata_path}")
+    print(f"Review queue artifact: {result.review_queue_path}")
+    print(f"Review queue metadata: {result.review_metadata_path}")
     print(f"Source rows audited: {metadata.source_row_count}")
     print(f"Selected for human review: {metadata.selected_count}")
     print("Mode: local artifacts only")

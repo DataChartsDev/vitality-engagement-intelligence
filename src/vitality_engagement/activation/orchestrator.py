@@ -20,6 +20,11 @@ from vitality_engagement.activation.engine import (
     decide_activations,
 )
 from vitality_engagement.activation.policy import ActivationPolicy
+from vitality_engagement.activation.review_queue import (
+    DEFAULT_REVIEW_QUEUE_METADATA_PATH,
+    DEFAULT_REVIEW_QUEUE_PATH,
+    write_review_queue_artifact,
+)
 from vitality_engagement.activation.schema import ContactContextLineage
 from vitality_engagement.models.scoring_artifact import (
     DEFAULT_PREDICTION_PATH,
@@ -42,6 +47,8 @@ class ActivationOrchestrationResult:
     decision_result: ActivationDecisionResult
     decision_path: Path
     metadata_path: Path
+    review_queue_path: Path
+    review_metadata_path: Path
 
 
 def _validate_distinct_paths(
@@ -52,6 +59,8 @@ def _validate_distinct_paths(
     context_metadata_path: Path,
     activation_decision_path: Path,
     activation_metadata_path: Path,
+    review_queue_path: Path,
+    review_metadata_path: Path,
 ) -> None:
     """Prevent any output path from overlapping governed inputs."""
     named_paths = {
@@ -61,6 +70,8 @@ def _validate_distinct_paths(
         "context_metadata_path": context_metadata_path,
         "activation_decision_path": activation_decision_path,
         "activation_metadata_path": activation_metadata_path,
+        "review_queue_path": review_queue_path,
+        "review_metadata_path": review_metadata_path,
     }
 
     resolved: dict[Path, str] = {}
@@ -114,8 +125,10 @@ def orchestrate_offline_activation(
     policy: ActivationPolicy | None = None,
     scoring_prediction_path: Path = DEFAULT_PREDICTION_PATH,
     scoring_metadata_path: Path = DEFAULT_SCORING_METADATA_PATH,
-    activation_decision_path: Path = (DEFAULT_ACTIVATION_DECISION_PATH),
-    activation_metadata_path: Path = (DEFAULT_ACTIVATION_METADATA_PATH),
+    activation_decision_path: Path = DEFAULT_ACTIVATION_DECISION_PATH,
+    activation_metadata_path: Path = DEFAULT_ACTIVATION_METADATA_PATH,
+    review_queue_path: Path = DEFAULT_REVIEW_QUEUE_PATH,
+    review_metadata_path: Path = DEFAULT_REVIEW_QUEUE_METADATA_PATH,
 ) -> ActivationOrchestrationResult:
     """Verify inputs, decide activations, and write local artifacts only."""
     _validate_distinct_paths(
@@ -125,6 +138,8 @@ def orchestrate_offline_activation(
         context_metadata_path=context_metadata_path,
         activation_decision_path=activation_decision_path,
         activation_metadata_path=activation_metadata_path,
+        review_queue_path=review_queue_path,
+        review_metadata_path=review_metadata_path,
     )
 
     scoring_artifact = load_verified_scoring_artifact(
@@ -157,6 +172,13 @@ def orchestrate_offline_activation(
         decision_path=activation_decision_path,
         metadata_path=activation_metadata_path,
     )
+    written_review_queue_path, written_review_metadata_path = write_review_queue_artifact(
+        decision_result,
+        activation_decision_path=written_decision_path,
+        activation_metadata_path=written_metadata_path,
+        review_queue_path=review_queue_path,
+        review_metadata_path=review_metadata_path,
+    )
 
     return ActivationOrchestrationResult(
         scoring_artifact=scoring_artifact,
@@ -164,4 +186,6 @@ def orchestrate_offline_activation(
         decision_result=decision_result,
         decision_path=written_decision_path,
         metadata_path=written_metadata_path,
+        review_queue_path=written_review_queue_path,
+        review_metadata_path=written_review_metadata_path,
     )

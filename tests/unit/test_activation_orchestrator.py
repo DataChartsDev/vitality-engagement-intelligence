@@ -23,6 +23,9 @@ from vitality_engagement.activation.orchestrator import (
     orchestrate_offline_activation,
 )
 from vitality_engagement.activation.policy import ActivationPolicy
+from vitality_engagement.activation.review_queue import (
+    verify_review_queue_artifact,
+)
 from vitality_engagement.models.predict import (
     HIGH_RISK_COLUMN,
     MODEL_NAME_COLUMN,
@@ -181,6 +184,8 @@ def test_orchestrator_verifies_decides_and_writes_locally(
     context_path, context_metadata_path = _write_context_artifacts(tmp_path)
     decision_path = tmp_path / "activation.parquet"
     activation_metadata_path = tmp_path / "activation.metadata.json"
+    review_queue_path = tmp_path / "human_review_queue.parquet"
+    review_metadata_path = tmp_path / "human_review_queue.metadata.json"
 
     result = orchestrate_offline_activation(
         context_path=context_path,
@@ -191,12 +196,18 @@ def test_orchestrator_verifies_decides_and_writes_locally(
         scoring_metadata_path=scoring_metadata_path,
         activation_decision_path=decision_path,
         activation_metadata_path=activation_metadata_path,
+        review_queue_path=review_queue_path,
+        review_metadata_path=review_metadata_path,
     )
 
     assert result.decision_path == decision_path
     assert result.metadata_path == activation_metadata_path
+    assert result.review_queue_path == review_queue_path
+    assert result.review_metadata_path == review_metadata_path
     assert decision_path.is_file()
     assert activation_metadata_path.is_file()
+    assert review_queue_path.is_file()
+    assert review_metadata_path.is_file()
     assert result.decision_result.metadata.source_row_count == 4
     assert result.decision_result.metadata.selected_count == 1
     assert result.decision_result.metadata.contact_context_lineage.artifact_path == str(
@@ -212,6 +223,13 @@ def test_orchestrator_verifies_decides_and_writes_locally(
         activation_metadata_path,
         expected_result=result.decision_result,
     )
+    verify_review_queue_artifact(
+        review_queue_path,
+        review_metadata_path,
+        expected_result=result.decision_result,
+        activation_decision_path=decision_path,
+        activation_metadata_path=activation_metadata_path,
+    )
 
 
 def test_scoring_failure_writes_no_activation_output(
@@ -221,6 +239,8 @@ def test_scoring_failure_writes_no_activation_output(
     context_path, context_metadata_path = _write_context_artifacts(tmp_path)
     decision_path = tmp_path / "activation.parquet"
     activation_metadata_path = tmp_path / "activation.metadata.json"
+    review_queue_path = tmp_path / "human_review_queue.parquet"
+    review_metadata_path = tmp_path / "human_review_queue.metadata.json"
 
     frame = pd.read_parquet(prediction_path)
     frame.loc[0, RISK_PROBABILITY_COLUMN] = 0.75
@@ -238,10 +258,14 @@ def test_scoring_failure_writes_no_activation_output(
             scoring_metadata_path=scoring_metadata_path,
             activation_decision_path=decision_path,
             activation_metadata_path=activation_metadata_path,
+            review_queue_path=review_queue_path,
+            review_metadata_path=review_metadata_path,
         )
 
     assert not decision_path.exists()
     assert not activation_metadata_path.exists()
+    assert not review_queue_path.exists()
+    assert not review_metadata_path.exists()
 
 
 def test_future_context_writes_no_activation_output(
@@ -261,6 +285,8 @@ def test_future_context_writes_no_activation_output(
     )
     decision_path = tmp_path / "activation.parquet"
     activation_metadata_path = tmp_path / "activation.metadata.json"
+    review_queue_path = tmp_path / "human_review_queue.parquet"
+    review_metadata_path = tmp_path / "human_review_queue.metadata.json"
 
     with pytest.raises(
         ContactContextArtifactError,
@@ -274,10 +300,14 @@ def test_future_context_writes_no_activation_output(
             scoring_metadata_path=scoring_metadata_path,
             activation_decision_path=decision_path,
             activation_metadata_path=activation_metadata_path,
+            review_queue_path=review_queue_path,
+            review_metadata_path=review_metadata_path,
         )
 
     assert not decision_path.exists()
     assert not activation_metadata_path.exists()
+    assert not review_queue_path.exists()
+    assert not review_metadata_path.exists()
 
 
 def test_input_output_path_collision_is_rejected(
@@ -287,6 +317,7 @@ def test_input_output_path_collision_is_rejected(
     context_path, context_metadata_path = _write_context_artifacts(tmp_path)
     original_digest = hashlib.sha256(prediction_path.read_bytes()).hexdigest()
     activation_metadata_path = tmp_path / "activation.metadata.json"
+    review_metadata_path = tmp_path / "human_review_queue.metadata.json"
 
     with pytest.raises(
         ActivationOrchestrationError,
@@ -300,7 +331,42 @@ def test_input_output_path_collision_is_rejected(
             scoring_metadata_path=scoring_metadata_path,
             activation_decision_path=prediction_path,
             activation_metadata_path=activation_metadata_path,
+            review_queue_path=tmp_path / "human_review_queue.parquet",
+            review_metadata_path=review_metadata_path,
         )
 
     assert hashlib.sha256(prediction_path.read_bytes()).hexdigest() == original_digest
     assert not activation_metadata_path.exists()
+    assert not review_metadata_path.exists()
+
+
+def test_review_queue_path_collision_is_rejected_before_outputs(
+    tmp_path: Path,
+) -> None:
+    prediction_path, scoring_metadata_path = _write_scoring_artifacts(tmp_path)
+    context_path, context_metadata_path = _write_context_artifacts(tmp_path)
+    original_digest = hashlib.sha256(prediction_path.read_bytes()).hexdigest()
+    decision_path = tmp_path / "activation.parquet"
+    activation_metadata_path = tmp_path / "activation.metadata.json"
+    review_metadata_path = tmp_path / "human_review_queue.metadata.json"
+
+    with pytest.raises(
+        ActivationOrchestrationError,
+        match="must use distinct paths",
+    ):
+        orchestrate_offline_activation(
+            context_path=context_path,
+            context_metadata_path=context_metadata_path,
+            decision_timestamp=DECISION_TIMESTAMP,
+            scoring_prediction_path=prediction_path,
+            scoring_metadata_path=scoring_metadata_path,
+            activation_decision_path=decision_path,
+            activation_metadata_path=activation_metadata_path,
+            review_queue_path=prediction_path,
+            review_metadata_path=review_metadata_path,
+        )
+
+    assert hashlib.sha256(prediction_path.read_bytes()).hexdigest() == original_digest
+    assert not decision_path.exists()
+    assert not activation_metadata_path.exists()
+    assert not review_metadata_path.exists()
